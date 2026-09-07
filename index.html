@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pivoines — un jardin numérique</title>
+<meta name="description" content="Un petit jardin de pivoines qui s'ouvre lentement, pétale après pétale.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,340;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #faf6f1;
+    --bg-alt: #f2e9e1;
+    --text: #2b2320;
+    --text-soft: #7a6d63;
+    --accent: #7a2e3d;
+    --accent-soft: #c97b8c;
+    --sage: #7c8b6f;
+    --card-bg: #ffffff;
+    --shadow: rgba(43,35,32,.10);
+    --font-display: 'Fraunces', serif;
+    --font-body: 'Manrope', sans-serif;
+    color-scheme: light;
+  }
+
+  body.night{
+    --bg: #1b1a2e;
+    --bg-alt: #211f3a;
+    --text: #f1ecf2;
+    --text-soft: #b9aec4;
+    --accent: #f0b8c2;
+    --accent-soft: #d391a1;
+    --card-bg: #262445;
+    --shadow: rgba(0,0,0,.45);
+    color-scheme: dark;
+  }
+
+  *{ box-sizing: border-box; }
+
+  html{ scroll-behavior: smooth; }
+
+  body{
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    line-height: 1.6;
+    transition: background .6s ease, color .6s ease;
+    overflow-x: hidden;
+  }
+
+  a{ color: inherit; }
+
+  h1, h2{
+    font-family: var(--font-display);
+    font-weight: 500;
+    margin: 0;
+  }
+
+  /* ---------- pétales flottants d'ambiance ---------- */
+  .petals-bg{
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+    z-index: 0;
+  }
+  .petal-fall{
+    position: absolute;
+    top: -5vh;
+    width: 14px;
+    height: 18px;
+    background: linear-gradient(160deg, var(--accent-soft), var(--accent));
+    border-radius: 0% 60% 0% 60%;
+    opacity: .55;
+    animation-name: fall, sway;
+    animation-timing-function: linear, ease-in-out;
+    animation-iteration-count: infinite, infinite;
+  }
+  @keyframes fall{
+    from{ transform: translateY(0) rotate(0deg); }
+    to{ transform: translateY(115vh) rotate(340deg); }
+  }
+  @keyframes sway{
+    0%, 100%{ margin-left: 0; }
+    50%{ margin-left: 40px; }
+  }
+
+  /* ---------- hero ---------- */
+  .hero{
+    position: relative;
+    z-index: 1;
+    min-height: 100svh;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 2rem;
+    flex-wrap: wrap;
+    padding: 6rem clamp(1.5rem, 6vw, 5rem) 3rem;
+  }
+  .hero-text{ max-width: 30rem; }
+  .hero-text h1{
+    font-style: italic;
+    font-size: clamp(3.2rem, 9vw, 6.4rem);
+    line-height: .95;
+    letter-spacing: -.01em;
+  }
+  .hero-sub{
+    margin-top: 1.4rem;
+    font-size: 1.05rem;
+    color: var(--text-soft);
+    max-width: 26rem;
+  }
+  .scroll-cue{
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    margin-top: 2.5rem;
+    text-decoration: none;
+    color: var(--accent);
+    font-weight: 600;
+    font-size: .95rem;
+  }
+  .scroll-cue .arrow{
+    display: inline-block;
+    animation: nudge 1.8s ease-in-out infinite;
+  }
+  @keyframes nudge{
+    0%, 100%{ transform: translateY(0); }
+    50%{ transform: translateY(5px); }
+  }
+
+  .hero-flower-wrap{
+    position: relative;
+    flex-shrink: 0;
+  }
+  .hero-flower{ cursor: pointer; }
+  .secret-line{
+    max-width: 20rem;
+    margin-top: 1rem;
+    font-size: .85rem;
+    font-style: italic;
+    color: var(--accent);
+    text-align: center;
+    opacity: 0;
+    max-height: 0;
+    overflow: hidden;
+    transition: opacity .8s ease;
+  }
+  .secret-line.show{ opacity: 1; max-height: 6rem; }
+
+  /* ---------- pivoine (générée en JS) ---------- */
+  .peony{ position: relative; }
+  .petal{
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform-origin: 50% 100%;
+    border-radius: 50% 50% 50% 50% / 62% 62% 38% 38%;
+    animation: bloom .9s cubic-bezier(.2,.9,.3,1) backwards;
+  }
+  @keyframes bloom{
+    from{ transform: rotate(var(--ang)) scale(.15); opacity: 0; }
+    to{ transform: rotate(var(--ang)) scale(1); opacity: 1; }
+  }
+  .peony-center{
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+  }
+  .stamen{
+    position: absolute;
+    border-radius: 50%;
+  }
+  .peony.rebloom .petal{ animation-name: bloom; }
+
+  /* ---------- sections ---------- */
+  .section{
+    position: relative;
+    z-index: 1;
+    padding: 5rem clamp(1.5rem, 6vw, 5rem);
+  }
+  .section.langage{ background: var(--bg-alt); }
+  .section-inner{
+    max-width: 42rem;
+    margin: 0 auto;
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity .9s ease, transform .9s ease;
+  }
+  .section-inner.wide{ max-width: 68rem; }
+  .section-inner.in-view{ opacity: 1; transform: translateY(0); }
+
+  .section h2{
+    font-size: clamp(1.9rem, 3.6vw, 2.6rem);
+    font-style: italic;
+    margin-bottom: 1.6rem;
+  }
+  .section p{ color: var(--text-soft); max-width: 38rem; }
+  .section p + p{ margin-top: 1rem; }
+
+  .gallery-intro{ margin-bottom: 3rem; }
+
+  .gallery{
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 2.5rem;
+  }
+  .gallery-item{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 2rem 1rem;
+    border-radius: 18px;
+    background: var(--card-bg);
+    box-shadow: 0 12px 30px var(--shadow);
+    transition: transform .35s ease, box-shadow .35s ease;
+  }
+  .gallery-item:hover{
+    transform: translateY(-6px);
+    box-shadow: 0 18px 40px var(--shadow);
+  }
+  .gallery-item .peony{ margin-bottom: 1.4rem; }
+  .gallery-item h3{
+    font-family: var(--font-display);
+    font-style: italic;
+    font-weight: 500;
+    font-size: 1.2rem;
+    margin: 0 0 .4rem;
+  }
+  .gallery-item p{
+    font-size: .9rem;
+    color: var(--text-soft);
+    margin: 0;
+  }
+
+  /* ---------- footer ---------- */
+  .site-footer{
+    position: relative;
+    z-index: 1;
+    padding: 3rem clamp(1.5rem, 6vw, 5rem) 2.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .75rem;
+    color: var(--text-soft);
+    font-size: .85rem;
+  }
+  .moon-toggle{
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    opacity: .45;
+    transition: opacity .3s ease, transform .3s ease;
+    line-height: 1;
+    padding: .25rem;
+  }
+  .moon-toggle:hover{ opacity: .9; transform: rotate(-15deg); }
+
+  /* ---------- toast (easter eggs) ---------- */
+  .toast{
+    position: fixed;
+    left: 50%;
+    bottom: 2rem;
+    transform: translate(-50%, 20px);
+    background: var(--accent);
+    color: #fff;
+    padding: .8rem 1.4rem;
+    border-radius: 999px;
+    font-size: .9rem;
+    box-shadow: 0 10px 30px rgba(0,0,0,.25);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .5s ease, transform .5s ease;
+    z-index: 10;
+    max-width: 90vw;
+    text-align: center;
+  }
+  .toast.show{ opacity: 1; transform: translate(-50%, 0); }
+
+  @media (max-width: 760px){
+    .hero{ justify-content: center; text-align: center; padding-top: 5rem; }
+    .hero-text{ max-width: 100%; }
+    .hero-sub{ margin-left: auto; margin-right: auto; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
+    .petals-bg{ display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="petals-bg" id="petalsBg" aria-hidden="true"></div>
+
+<header class="hero">
+  <div class="hero-text">
+    <h1>Pivoines</h1>
+    <p class="hero-sub">Un jardin qui s'ouvre lentement, pétale après pétale.</p>
+    <a class="scroll-cue" href="#langage">Entrer dans le jardin <span class="arrow">↓</span></a>
+  </div>
+  <div class="hero-flower-wrap">
+    <div class="hero-flower" id="heroFlower" role="button" tabindex="0" aria-label="Faire refleurir la pivoine"></div>
+    <p class="secret-line" id="secretLine">Vous avez trouvé le jardin secret. Chaque pivoine cache une petite graine de curiosité.</p>
+  </div>
+</header>
+
+<main>
+  <section id="langage" class="section langage">
+    <div class="section-inner reveal">
+      <h2>Ce qu'une pivoine raconte</h2>
+      <p>En Chine, on l'appelle la reine des fleurs. Elle orne les paravents impériaux et les vœux de prospérité, symbole d'honneur depuis des siècles.</p>
+      <p>Dans le langage des fleurs occidental, elle parle de romance timide et de vie heureuse. On dit qu'elle ferme les yeux la nuit et les rouvre au matin, comme une promesse renouvelée.</p>
+      <p>Sa saison est brève, trois semaines à peine. C'est peut-être pour cela qu'on l'aime autant : elle ne dure jamais assez longtemps pour devenir banale.</p>
+    </div>
+  </section>
+
+  <section id="varietes" class="section varietes">
+    <div class="section-inner wide reveal">
+      <div class="gallery-intro">
+        <h2>Cinq visages d'un même jardin</h2>
+        <p>Chaque variété a son propre caractère, sa propre façon de s'ouvrir.</p>
+      </div>
+      <div class="gallery" id="gallery"></div>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <p>Fait avec un peu de patience et beaucoup de pétales — <span id="year"></span></p>
+  <button class="moon-toggle" id="moonToggle" aria-label="Changer d'ambiance">🌙</button>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  document.getElementById('year').textContent = new Date().getFullYear();
+
+  /* ================= génération d'une pivoine ================= */
+  function createPeony(colors, size, opts){
+    opts = opts || {};
+    const wrap = document.createElement('div');
+    wrap.className = 'peony';
+    wrap.style.width = size + 'px';
+    wrap.style.height = size + 'px';
+
+    const outerCount = 8, innerCount = 8;
+
+    function addPetal(angle, w, h, bg, delay){
+      const p = document.createElement('div');
+      p.className = 'petal';
+      p.style.setProperty('--ang', angle + 'deg');
+      p.style.width = w + 'px';
+      p.style.height = h + 'px';
+      p.style.marginLeft = (-w/2) + 'px';
+      p.style.marginTop = (-h) + 'px';
+      p.style.background = bg;
+      p.style.animationDelay = delay + 's';
+      wrap.appendChild(p);
+    }
+
+    for(let i=0;i<outerCount;i++){
+      const angle = (360/outerCount)*i;
+      addPetal(angle, size*0.30, size*0.44, `linear-gradient(160deg, ${colors.outerLight}, ${colors.outer})`, i*0.045);
+    }
+    for(let i=0;i<innerCount;i++){
+      const angle = (360/innerCount)*i + 22.5;
+      addPetal(angle, size*0.20, size*0.30, `linear-gradient(160deg, ${colors.inner}, ${colors.innerDeep})`, 0.3 + i*0.045);
+    }
+
+    const center = document.createElement('div');
+    center.className = 'peony-center';
+    center.style.width = center.style.height = (size*0.20) + 'px';
+    center.style.background = `radial-gradient(circle at 35% 35%, ${colors.center}, ${colors.centerDeep})`;
+    wrap.appendChild(center);
+
+    const stamenPositions = [[0,-1],[0.9,-0.4],[0.55,0.8],[-0.55,0.8],[-0.9,-0.4]];
+    stamenPositions.forEach(function(pos, i){
+      const s = document.createElement('div');
+      s.className = 'stamen';
+      const d = size*0.028;
+      s.style.width = s.style.height = d + 'px';
+      s.style.left = 'calc(50% + ' + (pos[0]*size*0.06) + 'px)';
+      s.style.top = 'calc(50% + ' + (pos[1]*size*0.06) + 'px)';
+      s.style.background = colors.stamen;
+      center.appendChild(s);
+    });
+
+    if(opts.interactive){
+      wrap.style.cursor = 'pointer';
+    }
+
+    return wrap;
+  }
+
+  function rebloom(peonyEl){
+    const petals = peonyEl.querySelectorAll('.petal');
+    petals.forEach(function(p, i){
+      p.style.animation = 'none';
+      // force reflow
+      void p.offsetWidth;
+      p.style.animation = '';
+      p.style.animationDelay = (i*0.03) + 's';
+    });
+  }
+
+  /* ================= pivoine du héros ================= */
+  const heroColors = {
+    outerLight: '#fbe6ea', outer: '#e7a8b4',
+    inner: '#d98a9c', innerDeep: '#a8425a',
+    center: '#fdeecb', centerDeep: '#f3c968',
+    stamen: '#c98a2e'
+  };
+  const heroFlower = document.getElementById('heroFlower');
+  const heroPeony = createPeony(heroColors, 300, {interactive:true});
+  heroFlower.appendChild(heroPeony);
+
+  let heroClicks = 0;
+  function handleHeroInteract(){
+    heroClicks++;
+    rebloom(heroPeony);
+    if(heroClicks === 5){
+      document.getElementById('secretLine').classList.add('show');
+    }
+  }
+  heroFlower.addEventListener('click', handleHeroInteract);
+  heroFlower.addEventListener('keydown', function(e){
+    if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); handleHeroInteract(); }
+  });
+
+  /* ================= galerie de variétés ================= */
+  const varieties = [
+    {
+      name: 'Sarah Bernhardt',
+      desc: 'Rose poudré, pétales froissés comme de la soie.',
+      colors: { outerLight:'#fdeef1', outer:'#f0c3cd', inner:'#e5a0b0', innerDeep:'#c46a80', center:'#fdf1d8', centerDeep:'#f2cf7e', stamen:'#c98a2e' }
+    },
+    {
+      name: 'Duchesse de Nemours',
+      desc: 'Blanc crème, cœur légèrement citronné.',
+      colors: { outerLight:'#fffdf7', outer:'#f6ecd4', inner:'#efe0b8', innerDeep:'#d9c17e', center:'#faedb0', centerDeep:'#e8c34a', stamen:'#b57a1f' }
+    },
+    {
+      name: 'Coral Charm',
+      desc: 'Corail vif au matin, pêche pâle au soir.',
+      colors: { outerLight:'#fde3cf', outer:'#f3a878', inner:'#ea8657', innerDeep:'#c0562f', center:'#fde6b0', centerDeep:'#efb84c', stamen:'#a8511c' }
+    },
+    {
+      name: 'Kansas',
+      desc: 'Rouge profond, la plus théâtrale du jardin.',
+      colors: { outerLight:'#f2c3ca', outer:'#c15a6c', inner:'#992f42', innerDeep:'#611b28', center:'#f6d9a0', centerDeep:'#d99a3a', stamen:'#7a4a10' }
+    }
+  ];
+
+  const gallery = document.getElementById('gallery');
+  varieties.forEach(function(v){
+    const item = document.createElement('div');
+    item.className = 'gallery-item';
+    const flowerHolder = createPeony(v.colors, 140);
+    item.appendChild(flowerHolder);
+    const h3 = document.createElement('h3');
+    h3.textContent = v.name;
+    const p = document.createElement('p');
+    p.textContent = v.desc;
+    item.appendChild(h3);
+    item.appendChild(p);
+    item.addEventListener('mouseenter', function(){ rebloom(flowerHolder); });
+    gallery.appendChild(item);
+  });
+
+  /* ================= pétales d'ambiance ================= */
+  const petalsBg = document.getElementById('petalsBg');
+  const PETAL_COUNT = 12;
+  for(let i=0;i<PETAL_COUNT;i++){
+    spawnAmbientPetal(true);
+  }
+  function spawnAmbientPetal(initial){
+    const el = document.createElement('div');
+    el.className = 'petal-fall';
+    const duration = 14 + Math.random()*10;
+    const delay = initial ? -Math.random()*duration : 0;
+    el.style.left = Math.random()*100 + 'vw';
+    el.style.animationDuration = duration + 's, ' + (3+Math.random()*2) + 's';
+    el.style.animationDelay = delay + 's, ' + (Math.random()*2) + 's';
+    el.style.opacity = (0.35 + Math.random()*0.3).toFixed(2);
+    petalsBg.appendChild(el);
+  }
+
+  /* ================= révélation au scroll ================= */
+  const reveals = document.querySelectorAll('.reveal');
+  if('IntersectionObserver' in window){
+    const io = new IntersectionObserver(function(entries){
+      entries.forEach(function(entry){
+        if(entry.isIntersecting){
+          entry.target.classList.add('in-view');
+          io.unobserve(entry.target);
+        }
+      });
+    }, {threshold: 0.35});
+    reveals.forEach(function(el){ io.observe(el); });
+  } else {
+    reveals.forEach(function(el){ el.classList.add('in-view'); });
+  }
+
+  /* ================= easter egg : jardin de nuit ================= */
+  const moonToggle = document.getElementById('moonToggle');
+  moonToggle.addEventListener('click', function(){
+    document.body.classList.toggle('night');
+    const night = document.body.classList.contains('night');
+    moonToggle.textContent = night ? '☀️' : '🌙';
+    showToast(night ? '🌙 Le jardin s\'endort sous la lune.' : '☀️ Le jardin se réveille.');
+  });
+
+  /* ================= easter egg : code Konami ================= */
+  const konami = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'];
+  let konamiIndex = 0;
+  document.addEventListener('keydown', function(e){
+    const expected = konami[konamiIndex];
+    if(e.key === expected || e.key.toLowerCase() === expected){
+      konamiIndex++;
+      if(konamiIndex === konami.length){
+        konamiIndex = 0;
+        unlockSecretGarden();
+      }
+    } else {
+      konamiIndex = (e.key === konami[0]) ? 1 : 0;
+    }
+  });
+
+  function unlockSecretGarden(){
+    showToast('🌸 Jardin secret déverrouillé — merci d\'avoir cherché.');
+    for(let i=0;i<30;i++){
+      setTimeout(function(){ spawnAmbientPetal(false); }, i*40);
+    }
+  }
+
+  function showToast(message){
+    const toast = document.getElementById('toast');
+    toast.textContent = message;
+    toast.classList.add('show');
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(function(){ toast.classList.remove('show'); }, 3200);
+  }
+
+  /* ================= message console ================= */
+  console.log('%c🌸 Bienvenue dans le jardin.', 'color:#7a2e3d; font-size:14px; font-style:italic;');
+  console.log('%cSi vous lisez ceci, essayez le code Konami sur la page.', 'color:#7a2e3d;');
+
+})();
+</script>
+</body>
+</html>
