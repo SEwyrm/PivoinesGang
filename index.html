@@ -333,7 +333,7 @@
 </main>
 
 <footer class="site-footer">
-  <p>Fait avec un peu de patience et beaucoup de pétales — <span id="year"></span></p>
+  <p>Fait avec un peu de patience et en détente après un épisode de Lionnes signé le Y</p>
   <button class="moon-toggle" id="moonToggle" aria-label="Changer d'ambiance">🌙</button>
 </footer>
 
@@ -342,8 +342,6 @@
 <script>
 (function(){
   "use strict";
-
-  document.getElementById('year').textContent = new Date().getFullYear();
 
   /* ================= génération d'une pivoine ================= */
   function createPeony(colors, size, opts){
@@ -542,6 +540,44 @@
       setTimeout(function(){ spawnAmbientPetal(false); }, i*40);
     }
   }
+
+  /* ================= easter egg mobile : séquence tactile ================= */
+  const mobileSeq = ['up','up','down','down','left','right','left','right','tap','tap'];
+  let mobileIndex = 0;
+  let touchStartX = 0, touchStartY = 0, touchStartTime = 0;
+
+  document.addEventListener('touchstart', function(e){
+    const t = e.changedTouches[0];
+    touchStartX = t.clientX;
+    touchStartY = t.clientY;
+    touchStartTime = Date.now();
+  }, {passive: true});
+
+  document.addEventListener('touchend', function(e){
+    const t = e.changedTouches[0];
+    const dx = t.clientX - touchStartX;
+    const dy = t.clientY - touchStartY;
+    const dt = Date.now() - touchStartTime;
+    const absX = Math.abs(dx), absY = Math.abs(dy);
+
+    let gesture = null;
+    if(absX < 15 && absY < 15 && dt < 300){
+      gesture = 'tap';
+    } else if(Math.max(absX, absY) > 40){
+      gesture = absX > absY ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up');
+    }
+    if(!gesture) return;
+
+    if(gesture === mobileSeq[mobileIndex]){
+      mobileIndex++;
+      if(mobileIndex === mobileSeq.length){
+        mobileIndex = 0;
+        unlockSecretGarden();
+      }
+    } else {
+      mobileIndex = (gesture === mobileSeq[0]) ? 1 : 0;
+    }
+  }, {passive: true});
 
   function showToast(message){
     const toast = document.getElementById('toast');
